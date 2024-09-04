@@ -28,10 +28,6 @@ queries = {
             SELECT routine_name FROM information_schema.routines WHERE routine_type='FUNCTION';
 
         """,
-        "Obtener las funciones": """
-            SELECT routine_name FROM information_schema.routines WHERE routine_type='FUNCTION';
-
-        """,
         "Obtener los triggers": """
             SELECT tgname FROM pg_trigger JOIN pg_proc ON pg_trigger.tgfoid = pg_proc.oid WHERE NOT tgisinternal;
 
@@ -59,7 +55,8 @@ queries = {
 
         """,
         "Obtener índices.": """
-            SELECT indexname FROM pg_indexes WHERE schemaname = 'elegir_nombre_del_esquema';
+            SELECT schemaname, tablename, indexname FROM pg_indexes;
+
 
         """,
     },
