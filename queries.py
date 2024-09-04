@@ -109,13 +109,143 @@ queries = {
 
         """,
         "Obtener detalles de las tablas. Claves foráneas.": """
-            SELECT lanname FROM pg_language;
+            SELECT 
+                t.relname AS table_name,
+                a.attname AS foreign_key_column
+            FROM 
+                pg_constraint c
+            JOIN 
+                pg_class t ON c.conrelid = t.oid
+            JOIN 
+                pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = t.oid
+            WHERE 
+                c.contype = 'f'  -- 'f' indica clave foránea
+                AND t.relkind = 'r'  -- 'r' indica tabla
+            ORDER BY 
+                t.relname, a.attnum;
+
         """,
-        "Obtener los lenguajes del servidor": """
-            SELECT lanname FROM pg_language;
+        "Obtener detalles de las secuencias.": """
+            SELECT
+                n.nspname AS schema_name,
+                s.relname AS sequence_name,
+                s.relkind AS type
+            FROM
+                pg_catalog.pg_class s
+            JOIN
+                pg_catalog.pg_namespace n ON s.relnamespace = n.oid
+            WHERE
+                s.relkind = 'S'  -- 'S' indica secuencias
+            ORDER BY
+                schema_name,
+                sequence_name;
+
         """,
-        "Obtener los lenguajes del servidor": """
-            SELECT lanname FROM pg_language;
+        "Obtener la definición de un índice. ": """
+                SELECT * FROM pg_indexes 
+        """,
+    },
+    "Grupo IV. Obtener detalles de privilegios de los objetos.": {
+        "Obtener los privilegios de una tabla.": """
+            SELECT 
+                r.rolname AS usuario,
+                c.relname AS tabla,
+                CASE 
+                    WHEN has_table_privilege(r.rolname, c.oid, 'SELECT') THEN 'SELECT'
+                    WHEN has_table_privilege(r.rolname, c.oid, 'INSERT') THEN 'INSERT'
+                    WHEN has_table_privilege(r.rolname, c.oid, 'UPDATE') THEN 'UPDATE'
+                    WHEN has_table_privilege(r.rolname, c.oid, 'DELETE') THEN 'DELETE'
+                    ELSE 'SIN PERMISO'
+                END AS permiso
+            FROM 
+                pg_class c
+            JOIN 
+                pg_roles r ON has_table_privilege(r.rolname, c.oid, 'SELECT')
+                OR has_table_privilege(r.rolname, c.oid, 'INSERT')
+                OR has_table_privilege(r.rolname, c.oid, 'UPDATE')
+                OR has_table_privilege(r.rolname, c.oid, 'DELETE')
+            JOIN 
+                pg_namespace n ON n.oid = c.relnamespace
+            WHERE 
+                n.nspname = 'public' -- puedes cambiarlo por otro schema si es necesario
+                AND c.relname = 'nombre_de_la_tabla';
+
+        """,
+        "Obtener los privilegios de las funciones. ": """
+            SELECT 
+                r.rolname AS usuario,
+                n.nspname AS esquema,
+                p.proname AS funcion,
+                CASE 
+                    WHEN has_function_privilege(r.rolname, p.oid, 'EXECUTE') THEN 'EXECUTE'
+                    ELSE 'SIN PERMISO'
+                END AS permiso
+            FROM 
+                pg_proc p
+            JOIN 
+                pg_roles r ON has_function_privilege(r.rolname, p.oid, 'EXECUTE')
+            JOIN 
+                pg_namespace n ON n.oid = p.pronamespace
+            WHERE 
+                n.nspname = 'public' -- Cambia esto por el esquema que desees
+            ORDER BY 
+                r.rolname, p.proname;
+ 
+        """,
+    },
+        "Grupo V. Monitoreo.": {
+        "Usuarios conectados, IP y consulta": """
+            SELECT
+                usename AS usuario,
+                client_addr AS ip_cliente,
+                query AS consulta
+            FROM
+                pg_stat_activity
+            WHERE
+                state = 'active';
+
+        """,
+        "Tamaño de las bases de datos del servidor. ": """
+            SELECT
+                d.datname AS base_de_datos,
+                pg_size_pretty(pg_database_size(d.datname)) AS tamaño
+            FROM
+                pg_database d
+            ORDER BY
+                pg_database_size(d.datname) DESC;
+
+        """,
+        "Tamaño de una tabla. ": """
+            SELECT pg_size_pretty(pg_total_relation_size('nombre_tabla')) AS tamaño
+ 
+        """,
+        "Tamaño de todas las tablas de un esquema. ": """
+            SELECT
+                schemaname AS esquema,
+                tablename AS tabla,
+                pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename)) AS tamaño
+            FROM
+                pg_tables
+            WHERE
+                schemaname = 'public'  
+            ORDER BY
+                pg_total_relation_size(schemaname || '.' || tablename) DESC;
+
+            
+        """,
+        "Listado por BBDD del tamaño total de la BBDD, el nombre del esquema, el nombre de la tabla, el tamaño  total de la tabla, el tamaño de la tabla y el tamaño del índice.": """
+            SELECT
+                pg_size_pretty(pg_database_size(current_database())) AS tamaño_total_bd,
+                schemaname AS esquema,
+                relname AS tabla,
+                pg_size_pretty(pg_total_relation_size(relid)) AS tamaño_total,
+                pg_size_pretty(pg_relation_size(relid)) AS tamaño_tabla,
+                pg_size_pretty(pg_total_relation_size(relid) - pg_relation_size(relid)) AS tamaño_indices
+            FROM
+                pg_stat_user_tables
+            ORDER BY
+                pg_total_relation_size(relid) DESC;
+ 
         """,
     },
     # Agrega más grupos y consultas aquí...
